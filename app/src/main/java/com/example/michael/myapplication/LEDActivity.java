@@ -16,6 +16,10 @@ import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.ResponseHandlerInterface;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -24,6 +28,7 @@ import java.util.Map;
 import java.util.SortedMap;
 
 import cz.msebera.android.httpclient.Header;
+import cz.msebera.android.httpclient.entity.StringEntity;
 
 /**
  * Created by michael on 1/14/18.
@@ -58,7 +63,7 @@ public class LEDActivity extends AppCompatActivity {
         spinner.setAdapter(adapter);
     }
 
-    public void onButtonClick(View view) {
+    public void onButtonClick(View view) throws JSONException, UnsupportedEncodingException {
         Spinner spinner = (Spinner)findViewById(R.id.spinner2);
         String currentItem = spinner.getSelectedItem().toString();
         Action currentAction = actionMap.get(currentItem);
@@ -78,15 +83,18 @@ public class LEDActivity extends AppCompatActivity {
             @Override
             public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
                 tv.append("\n\n");
-                tv.append("success!\n");
+                tv.append("success!\n\n");
+                if (responseBody != null) {
+                    tv.append(new String(responseBody));
+                }
             }
 
             @Override
             public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
                 tv.append("\n\n");
-                tv.append("failure!\n");
+                tv.append("failure!\n\n");
                 if (responseBody != null) {
-                    tv.append(String.valueOf(responseBody));
+                    tv.append(new String(responseBody));
                 }
                 tv.append(error.getMessage());
             }
@@ -94,10 +102,16 @@ public class LEDActivity extends AppCompatActivity {
 
         httpClient.setConnectTimeout(2);
         httpClient.setTimeout(2);
+
         if (currentAction.getMethod().equals("GET")) {
             httpClient.get(uri, responder);
         } else if (currentAction.getMethod().equals("PUT")) {
-            httpClient.put(uri, responder);
+            JSONObject params = new JSONObject();
+            String[] kv = currentAction.getParam().split("=");
+            params.put(kv[0], kv[1]);
+            StringEntity entity = new StringEntity(params.toString());
+
+            httpClient.put(this, uri, entity, "application/json", responder);
         }
     }
 
